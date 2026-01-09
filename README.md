@@ -1,6 +1,6 @@
 #  Lead Connect – AI Powered Personalized Newsletter Automated System
 
-## Why This Exists
+## Introduction
 Lead Connect automates personalized tech newsletters for subscribers based on their interests and preferred reading tone. Instead of sending generic emails, it dynamically generates content, images, and email copy tailored to each subscriber.  
 
 It exists because most email campaigns are generic, boring, and fail to engage. Lead Connect fixes that with automation + AI personalization.
@@ -26,6 +26,20 @@ It exists because most email campaigns are generic, boring, and fail to engage. 
 - **Unsplash API** – Image fetching  
 - **Gmail API** – Sending emails  
 - **Python** – Code nodes in workflow
+
+## Example of Workflow
+###                                              Capture User Info and Send Welcome Email 
+![Workflow Overview](Output/Workflow%20no%201.PNG)
+
+###                                             Send personalized Newsletter to Customers
+![Workflow Overview](Output/Workflow%20no%202.PNG)
+
+## Output Example
+
+###                                                Newsletter Sent to User
+![Workflow Overview](Output/Newsletter%20Output.PNG)
+
+
 
 ## License
 MIT License
