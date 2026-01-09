@@ -1,7 +1,7 @@
-# StudyMate – Personalized Tech Newsletter & Lead Connect System
+#  Lead Connect – AI Powered Personalized Newsletter Automated System
 
 ## Why This Exists
-StudyMate automates personalized tech newsletters for subscribers based on their interests and preferred reading tone. Instead of sending generic emails, it dynamically generates content, images, and email copy tailored to each subscriber.  
+Lead Connect automates personalized tech newsletters for subscribers based on their interests and preferred reading tone. Instead of sending generic emails, it dynamically generates content, images, and email copy tailored to each subscriber.  
 
 It exists because most email campaigns are generic, boring, and fail to engage. StudyMate fixes that with automation + AI personalization.
 
