@@ -1,0 +1,1044 @@
+{
+  "name": "Lead Connect",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -848,
+        32
+      ],
+      "id": "01b6611d-b894-42fe-acae-282eee36e030",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1GAIRZGit8IwZnDq8x0JsRGxnw2dGd9Y580V4IQtJ11w",
+          "mode": "list",
+          "cachedResultName": "Newsletter List",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1GAIRZGit8IwZnDq8x0JsRGxnw2dGd9Y580V4IQtJ11w/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1GAIRZGit8IwZnDq8x0JsRGxnw2dGd9Y580V4IQtJ11w/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -640,
+        32
+      ],
+      "id": "f9804e78-7578-440e-89b6-2192795933a5",
+      "name": "Get all Rows",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "qS6DvhaQfUammgas",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -160,
+        32
+      ],
+      "id": "be7ca46c-e729-45e1-859e-2990ccad95da",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst items = $input.all();\n\n// Prepare structured articles array\nconst articlesOutput = [];\n\n// Loop through each item\nfor (const item of items) {\n  const articles = item.json.articles; // Make sure 'articles' exists in incoming JSON\n  if (!articles) continue;\n\n  for (const article of articles) {\n    articlesOutput.push({\n      title: article.title,\n      description: article.description,\n      url: article.url,\n      image: article.image,\n      publishedAt: article.publishedAt,\n      source: article.source\n    });\n  }\n}\n\n// Return as a clean array\nreturn [\n  {\n    json: {\n      articles: articlesOutput\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -128
+      ],
+      "id": "96164dbf-b7a1-4d2a-886e-053bb4253c98",
+      "name": "Categorized into Headings"
+    },
+    {
+      "parameters": {
+        "url": "=https://gnews.io/api/v4/search?q={{ encodeURIComponent($json.keywords[0]) }}%20OR%20{{ encodeURIComponent($json.keywords[1]) }}%20OR%20{{ encodeURIComponent($json.keywords[2]) }}&lang=en&max=5&sortby=publishedAt&apikey=ADD_API_KEY_HERE\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        -128
+      ],
+      "id": "53553558-05b6-42ec-8638-533088ff4b3d",
+      "name": "GNews API"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst items = $input.all();\n\n// Object to store grouped users by interest\nconst grouped = {};\n\n// Predefined keywords for each interest\nconst interestKeywords = {\n  \"Software Development\": [\n    \"coding\", \"software design\", \"agile\", \"DevOps\", \"CI/CD\", \"low-code\", \"software frameworks\", \"cloud-native apps\"\n  ],\n  \"Web Development\": [\n    \"frontend\", \"backend\", \"javascript\", \"React\", \"Vue\", \"progressive web apps\", \"web3 development\", \"serverless architecture\", \"CSS frameworks\"\n  ],\n  \"Game Development\": [\n    \"unity\", \"unreal\", \"graphics\", \"game engine\", \"VR games\", \"mobile game dev\", \"indie game development\", \"metaverse games\", \"AI in games\"\n  ],\n  \"AI \": [\n    \"machine learning\", \"neural networks\", \"automation\", \"GPT AI\", \"generative AI\", \"AI frameworks\", \"chatbots\", \"AI ethics\", \"deep learning\"\n  ],\n  \"Quantum Computing\": [\n    \"qubits\", \"superposition\", \"entanglement\", \"quantum algorithms\", \"quantum programming\", \"IBM Quantum\", \"quantum AI\", \"quantum supremacy\"\n  ],\n  \"Data Science and Analytics\": [\n    \"data visualization\", \"statistics\", \"big data\", \"Python data analysis\", \"predictive analytics\", \"business intelligence\", \"data mining\", \"AI analytics\"\n  ],\n  \"Cyber Security\": [\n    \"encryption\", \"threat detection\", \"network security\", \"ethical hacking\", \"zero trust\", \"penetration testing\", \"ransomware protection\", \"cloud security\"\n  ]\n};\n\n\n\n\nfor (const item of items) {\n  const user = item.json;\n\n  // Clean interest\n  let interest = user.Interest;\n  try {\n    if (interest.startsWith(\"[\")) {\n      const parsed = JSON.parse(interest);\n      interest = parsed[0]; \n    }\n  } catch (e) {}\n\n  // Clean tone\n  let tone = user.Tone;\n  try {\n    if (tone.startsWith(\"[\")) {\n      const parsedTone = JSON.parse(tone);\n      tone = parsedTone[0];\n    }\n  } catch (e) {}\n\n  // Build user object\n  const cleanUser = {\n    row_number: user.row_number,\n    Name: user.Name,\n    Email: user.Email,\n    Tone: tone\n  };\n\n  // If group doesn't exist, create it\n  if (!grouped[interest]) {\n    grouped[interest] = {\n      keywords: interestKeywords[interest] || [],\n      users: []\n    };\n  }\n\n  grouped[interest].users.push(cleanUser);\n}\n\n// Convert grouped object → array of { interest, keywords, users }\nconst output = Object.entries(grouped).map(([interest, data]) => {\n  return { json: { interest, keywords: data.keywords, users: data.users } };\n});\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        32
+      ],
+      "id": "e1aba792-6286-4fc5-aa3c-668fffb5e7ed",
+      "name": "Categorize into Interests"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-exp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -240
+      ],
+      "id": "8d345212-ba7c-47b6-a11e-2a03c84da9ec",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ADD_API_KEY_HERE",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1040,
+        688
+      ],
+      "id": "61a2f474-9ecf-4679-82e2-82d5f129c331",
+      "name": "Send a message",
+      "webhookId": "814c1db1-fa34-4790-9329-9f2bc2db2eaf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ADD_API_KEY_HERE",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-exp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        464,
+        528
+      ],
+      "id": "bbd0b333-02d7-46cd-bbfb-0dae9bdb5d37",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ADD_API_KEY_HERE",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Email in HTML:{{ $json.newsletter_html }}\nName: {{ $json.name }}\nTone of Email: {{ $json.tone }}\nInterest: {{ $json.interest }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=SYSTEM: You are an expert newsletter copywriter. Follow instructions exactly.\n\nINSTRUCTION:\n\n1. Rephrase **only the text content** inside the provided HTML so that the tone matches the user’s requested tone ({{ $json.tone }}). Do NOT modify the HTML structure, tags, inline CSS, or layout. All images, tables, and links must remain in place.\n\n2. Address the user by name near the top of the content like this: \"Hey {{ $json.name }}, ...\"\n\n3. Create a short, catchy **subject line** (<= 80 characters) in the same tone that includes the Interest/Topic ({{ $json.interest }}).\n\n4. Remove any code fences or markdown (do not include ``` or other wrappers).\n\n5. Return **ONLY valid JSON** with exactly these keys: `\"email\"`, `\"subject\"`, `\"html\"`.\n\n6. `\"email\"` must equal the provided {{ $json.email }}.  \n7. `\"subject\"` must be a plain string including {{ $json.interest }}.  \n8. `\"html\"` must be the full HTML string with the rephrased text content and \"Hey {{ $json.name }}\" near the top.\n\nINPUT VARIABLES:\n\n- name: {{ $json.name }}  \n- email: {{ $json.email }}  \n- tone: {{ $json.tone }}  \n- interest: {{ $json.interest }}  \n- html: {{ $json.newsletter_html }}\n\nEXPECTED OUTPUT EXAMPLE (exact format — nothing else):\n\n{\n  \"email\": \"nouman.ned123@gmail.com\",\n  \"subject\": \"Once Upon a Time in Tech — iPhone 17 & Chip Breakthroughs\",\n  \"html\": \"<!DOCTYPE html>\\n<html lang=\\\"en\\\"> ... rephrased HTML with 'Hey Nouman...' near top ...</html>\"\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        432,
+        688
+      ],
+      "id": "b92fb49b-a3a4-4c39-b489-8b51a28d19c4",
+      "name": "Tone Specfier"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.articles }}",
+        "options": {
+          "systemMessage": "=You are writing a weekly tech newsletter for a company called Tech Savory.\n\nInput\n\nYou will be given a JSON payload with the following structure:\n\n{\n  \"articles\": [\n    {\n      \"title\": \"...\",\n      \"description\": \"...\",\n      \"url\": \"...\",\n      \"image\": \"...\",\n      \"publishedAt\": \"...\",\n      \"source\": {\n        \"id\": \"...\",\n        \"name\": \"...\",\n        \"url\": \"...\",\n        \"country\": \"...\"\n      }\n    }\n  ]\n}\n\nYour Tasks\n\nWork directly with the articles array. Each object is a complete article.\n\nSummarize each article’s description into 40–60 words, professional and clear (no hype, no clickbait).\n\nFormat dates like Aug 20, 2025.\n\nProduce a single email-friendly HTML newsletter:\n\nInline CSS only (no <style> blocks).\n\n600px max-width, centered.\n\nTable-based layout (safe for Gmail/Outlook).\n\nResponsive: featured article full-width, remaining in 2-column grid (stack on mobile).\n\nBrand & Style\n\nColors: Peach #ffbd59 (accents/buttons), Black #000000 (text), White #ffffff (background).\n\nFont: system fonts (Arial, Helvetica, sans-serif).\n\nLogo at top, centered:\n\n<img src=\"https://i.postimg.cc/x8Pg9Fm1/TECH-SAVOURY.png\" alt=\"Tech Savory\" width=\"200\" style=\"display:block;margin:0 auto;max-width:200px;height:auto;\" />\n\nContent Flow\n\nSubject Line → short, engaging, based on the week’s biggest story.\n\nIntro Section → Start with a heading “This Week in Tech” followed by 2–3 sentences briefing about the week in tech, setting context before diving into articles.\n\nArticles Section\n\nFirst article = featured (big image, large title, full width).\n\nOther articles = 2-column cards with image, title, summary, date, and “Read More” button.\n\nClosing Section\n\nAdd a heading “Closing Thoughts”.\n\nWrite 2–3 sentences wrapping up the newsletter (friendly, professional tone).\n\nEnd with:\n\nA 3–4 line summary of all the week’s articles.\n\nAn inspiring quote about innovation, technology, or creativity, formatted in italic.\n\nFooter Section\n\nAdd a footer block with:\n\nThank you note (“Thanks for reading the Tech Savory Newsletter ✨”).\n\nA friendly sign-off (“Stay curious. Stay inspired.”).\n\nContact/unsubscribe links.\n\nButton Requirements\n\nUse bulletproof email button (table-based).\n\nBackground: Peach #ffbd59, Text: Black #000000.\n\nOutput\n\nReturn one complete HTML document only, ready to send in an email service provider.\nNo external CSS or scripts. No explanations. Just the HTML.\n⚠️ Important: When including HTML inside JSON strings:\n\nDo not wrap the HTML with triple backticks (html), as JSON cannot parse them.\n\nEscape all double quotes \" inside the HTML as \\\".\n\nMake sure your string is fully enclosed in double quotes \"...\" and that any line breaks use \\n.\nIf you don’t follow these steps, the JSON parser will throw an error like:\nExpected ',' or '}' after property value at position XXXX."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        688,
+        -128
+      ],
+      "id": "b7c0aadb-5358-49bb-b9f6-c0a4d63c1e8a",
+      "name": "Newsletter Generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assume the incoming data is in `items[0].json.output`\nconst htmlWithBackticks = items[0].json.output;\n\n// Remove the triple backticks and optional 'html' marker\nconst cleanedHtml = htmlWithBackticks.replace(/```html\\n|```/g, '');\n\n// Return the cleaned HTML\nreturn [{ json: { output: cleanedHtml } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        -128
+      ],
+      "id": "1994d8ed-dc86-4539-bb18-879d11595b17",
+      "name": "Clear unambigous characters from output"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  try {\n    let raw = item.json.output || \"\";\n\n    // Remove wrapping like ```json ... ```\n    raw = raw.replace(/```json\\s*/gi, '').replace(/```/g, '').trim();\n\n    // Extract fields with regex\n    const emailMatch = raw.match(/\"email\"\\s*:\\s*\"([^\"]+)\"/);\n    const subjectMatch = raw.match(/\"subject\"\\s*:\\s*\"([^\"]+)\"/);\n    const htmlMatch = raw.match(/\"html\"\\s*:\\s*\"([\\s\\S]*)\"$/m); // greedy to capture until last \"\n\n    const email = emailMatch ? emailMatch[1] : null;\n    const subject = subjectMatch ? subjectMatch[1] : null;\n    let html = htmlMatch ? htmlMatch[1] : null;\n\n    if (html) {\n      // Unescape \\\" to real quotes\n      html = html.replace(/\\\\\"/g, '\"');\n\n      // Also fix stray newlines\n      html = html.replace(/\\\\n/g, '\\n');\n    }\n\n    return {\n      json: { email, subject, html }\n    };\n\n  } catch (err) {\n    return {\n      json: { error: err.message, raw: item.json.output }\n    };\n  }\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        688
+      ],
+      "id": "92e7c1bc-cf40-45cd-bff5-38a4d785fb14",
+      "name": "Clear unambigous characters from output1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1312,
+        48
+      ],
+      "id": "8beedd5d-8c81-4b89-a6ee-8e303ebbe499",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        192,
+        672
+      ],
+      "id": "9d1e3ca6-1266-476f-aa3d-0cb7155b566d",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all(); // get both incoming items\n\n// find the one with newsletter HTML\nconst htmlItem = items.find(i => i.json.output);\nconst html = htmlItem ? htmlItem.json.output : \"\";\n\n// find the one with users & interest\nconst userItem = items.find(i => i.json.users);\nconst interest = userItem ? userItem.json.interest : \"\";\nconst users = userItem ? userItem.json.users : [];\n\nif (!users || users.length === 0) {\n  return [];\n}\n\nreturn users.map(user => ({\n  json: {\n    name: user.Name,\n    email: user.Email,\n    tone: user.Tone,\n    interest,\n    newsletter_html: html\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        48
+      ],
+      "id": "a8f3a30a-7b38-4021-a953-4a27f19f314b",
+      "name": "Combine user details and html newsletter",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "formTitle": "Email Newsletter Form",
+        "formDescription": "Join our Email Subscription for future updates and weekly newsletter of the latest tech development.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name",
+              "placeholder": "e.g: Sara, Yasir ",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "placeholder": "e.g john@gmail.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Interest? (Pick as Many as you want)",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "AI "
+                  },
+                  {
+                    "option": "Quantum Computing"
+                  },
+                  {
+                    "option": "Cyber Security"
+                  },
+                  {
+                    "option": "Data Science and Analytics"
+                  },
+                  {
+                    "option": "Game Development"
+                  },
+                  {
+                    "option": "Software Development"
+                  },
+                  {
+                    "option": "Web Development"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email Tones? (What kind of newsletter you love to read?)",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Casual (Like Friendly)"
+                  },
+                  {
+                    "option": "Sarcastic "
+                  },
+                  {
+                    "option": "Professional / Formal"
+                  },
+                  {
+                    "option": "Story Telling Format"
+                  },
+                  {
+                    "option": "Neutral"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -448,
+        -1600
+      ],
+      "id": "3108c1d8-a976-429e-b258-92b10236cb6d",
+      "name": "Form For Newsletter",
+      "webhookId": "70bde195-ede9-4444-b724-d8e8138195a3"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1GAIRZGit8IwZnDq8x0JsRGxnw2dGd9Y580V4IQtJ11w",
+          "mode": "list",
+          "cachedResultName": "Newsletter List",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1GAIRZGit8IwZnDq8x0JsRGxnw2dGd9Y580V4IQtJ11w/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1GAIRZGit8IwZnDq8x0JsRGxnw2dGd9Y580V4IQtJ11w/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json[\"Full Name\"] }}",
+            "Email": "={{ $json.Email }}",
+            "Tone": "={{ $json[\"Email Tones? (What kind of newsletter you love to read?)\"] }}",
+            "Interest": "={{ $json[\"Interest? (Pick as Many as you want)\"] }}"
+          },
+          "matchingColumns": [
+            "Name"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Interest",
+              "displayName": "Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tone",
+              "displayName": "Tone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -288,
+        -1600
+      ],
+      "id": "2f3d41d8-0be8-471f-bb8b-eb16222db6a6",
+      "name": "Capture Leads",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ADD_API_KEY_HERE",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Interest: {{ $json.Interest }}\nTone: {{ $json.Tone }}\nEmail: {{ $json.Email }}\nName: {{ $json.Name }}\nImages Link: {{ $json.images }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Role: Act as a Personalized Welcome Email writer.\n\nContext: You are writing an email for a company named \"Tech Savory\". Tech Savory helps everyday people make smarter choices about gadgets and software. Audience is non-technical but curious about tech.\n\nImportant Note:\nLogo at top, centered:\n\n<img src=\"https://i.postimg.cc/x8Pg9Fm1/TECH-SAVOURY.png\" alt=\"Tech Savory\" width=\"200\" style=\"display:block;margin:0 auto;max-width:200px;height:auto;\" />\nTask: Generate a **full HTML email with inline styles** according to these parameters:\n\n1. Insert the first image URL {{ $json.images[0] }} **before the greeting/intro**.\n2. Insert the second image URL {{ $json.images[1] }} **just before the closing line**.\n3. Headline: Attention-grabbing, short, welcoming.\n4. Intro: 2–3 friendly sentences introducing Tech Savory and why the subscriber will benefit.\n5. Personalized Section: 2–3 sentences connecting the subscriber’s Interest ({{ $json.Interest[0] }}) with Tech Savory’s value.\n6. Bullet Points: 3 short bullets outlining what kind of content they’ll receive.\n7. Closing Line: Warm sign-off with brand personality.\n8. CTA Button: One clear call-to-action.\n9. Ending: Sign off using the user's name {{ $json.Name }}.\n\nTone: Use the tone specified in {{ $json.Tone[0] }}. Follow example styles: Sarcastic, Casual, Neutral, Professional, Storytelling.\n\n**Important Output Requirements:**\n- Return **JSON object** with three fields:\n  1. `\"HTMLMessage\"` → the full HTML email (with images embedded in `<img>` tags at the specified positions, ready to send).\n  2. `\"Subject\"` → a short, attention-grabbing subject line for the email.\n  3. `\"Email\"` → the recipient’s email address (`{{ $json.Email }}`).\n\n- Do **not** include markdown/code fences in the HTML output.\n- Ensure inline styles are included for all HTML elements.\n- Keep images exactly where specified.\n- Make it ready to plug directly into Gmail Node in n8n.\n\nExample output format:\n\n{\n  \"HTMLMessage\": \"<html>....full HTML email...</html>\",\n  \"Subject\": \"Welcome to Tech Savory! Try not to break anything.\",\n  \"Email\": \"nouman.ned123@gmail.com\"\n}\n\n1. Sarcastic:\nHeadline: “Welcome to Tech Savory. Try not to break anything.” \nIntro: “We’re here to stop you from making terrible gadget choices. You’re welcome.” Personalized: “Since you’re into {{ $json.Interest[0] }}, we’ll help you find tools that don’t self-destruct after three days. Revolutionary, I know.”\nClosing: “Stick with us. We’ll keep you from rage-quitting tech.”\n\n2. Casual:\nHeadline: “Hey, welcome aboard 👋” \nIntro: “We’re Tech Savory, your shortcut to smarter gadgets and apps. No jargon, no stress—just clear tips.” \nPersonalized: “Since you like {{ $json.Interest[0] }}, expect simple advice that makes it way easier to enjoy without googling every other word.” \nClosing: “Glad to have you! Let’s make tech fun.” \n\n3. Neutral:\nHeadline: “Welcome to Tech Savory” \nIntro: “Tech Savory helps people make informed choices about gadgets and software.” Personalized: “As someone interested in {{ $json.Interest[0] }}, you’ll get straightforward recommendations, comparisons, and practical tips.”\nClosing: “We look forward to sharing helpful insights with you.” \n\n4. Professional:\nHeadline: “A Warm Welcome to Tech Savory”\nIntro: “Thank you for subscribing. At Tech Savory, our goal is to simplify technology decisions with clarity and expertise.”\nPersonalized: “Your interest in {{ $json.Interest[0] }} means we’ll provide in-depth, carefully evaluated recommendations that align with your needs.”\nClosing: “We’re honored to support your journey toward smarter technology choices.” \n\n5. Storytelling Format:\nHeadline: “Every great journey starts with curiosity…”\nIntro: “Tech Savory began with a simple idea: everyday people deserve tech that works for them, not against them. Now you’re part of that story.”\nPersonalized: “Since you’re curious about {{ $json.Interest[0] }}, imagine this: you exploring new tools, skipping the overwhelm, and enjoying smooth, smart upgrades.”\nClosing: “Here’s to the start of your story with Tech Savory. We’re glad you’re here.” Tell this shit to return the subject and also the gmail of the user seperated from output\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -1584
+      ],
+      "id": "6edc5403-23e4-4106-a638-c946ec86d321",
+      "name": "Email Generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: Unsplash API response\n// Output: Array with 2 image URLs\n\nconst results = $json.results || [];\n\nlet images = [];\n\n// Take only first 2 images (if available)\nfor (let i = 0; i < 2 && i < results.length; i++) {\n  images.push(results[i].urls.small);  // or .regular if you want bigger\n}\n\nreturn [\n  {\n    json: {\n      images: images\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -1456
+      ],
+      "id": "a76c63ee-2b52-4a97-93c5-14ced27c6409",
+      "name": "Extract Images from Unsplash"
+    },
+    {
+      "parameters": {
+        "url": "= https://api.unsplash.com/search/photos?query={{ $json.Interest }}&per_page=2&page={{ Math.floor(Math.random() * 10) + 1 }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.Interest }} best images"
+            },
+            {
+              "name": "per_page",
+              "value": "2"
+            },
+            {
+              "name": "page",
+              "value": "7"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16,
+        -1456
+      ],
+      "id": "2615ef12-d1bc-4c06-943d-157690e98980",
+      "name": "Unsplash HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ADD_API_KEY_HERE",
+          "name": "Unsplash Credientals"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Grab the raw AI output\nlet raw = $json[\"output\"];\n\n// Remove ```json or ``` markers if present\nraw = raw.replace(/```json/g, '').replace(/```/g, '').trim();\n\n// Parse it as JSON\nlet parsed;\ntry {\n    parsed = JSON.parse(raw);\n} catch (err) {\n    throw new Error(\"Failed to parse AI JSON output: \" + err);\n}\n\n// Return properly formatted JSON for Gmail Node\nreturn [{ json: parsed }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -1584
+      ],
+      "id": "3517fd0f-17c8-4b45-8ade-946d6ebb564e",
+      "name": "Extract Email Address and subject from the Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Grab all incoming items\nconst allItems = $input.all();\n\n// Separate arrays for user data and images\nlet userData = [];\nlet imageData = [];\n\n// Split incoming items into users and images\nallItems.forEach(item => {\n    if(item.json.Name) userData.push(item.json);   // subscriber info\n    if(item.json.images) imageData.push(item.json.images); // images array\n});\n\n// Combine each user with the images\nconst combinedData = userData.map(user => {\n    return {\n        Name: user.Name,\n        Email: user.Email,\n        Tone: user.Tone,\n        Interest: user.Interest,\n        images: imageData.flat() // flatten in case multiple image arrays\n    };\n});\n\n// Return combined objects for AI agent\nreturn combinedData.map(data => ({ json: data }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -1584
+      ],
+      "id": "0a44aef4-3157-49b6-8ba7-c4afb2f00e30",
+      "name": "Combine Image and Leads Data"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-exp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -1328
+      ],
+      "id": "abfab5b8-7881-4ddd-b995-d4d129298349",
+      "name": "Google Gemini Chat Model6",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "wEawkrJ4V986oCV5",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        400,
+        -1584
+      ],
+      "id": "d78c2655-5822-441f-a9e1-9935d3e00ae3",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        480,
+        928
+      ],
+      "id": "fb58d4c1-c585-4cf0-94d3-d79adec76372",
+      "name": "Operation Completed"
+    },
+    {
+      "parameters": {
+        "content": "# **🔔 Trigger**\n- ### **Activates when a new lead is added to Google Sheets.**  \n",
+        "height": 260,
+        "width": 480,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        -1696
+      ],
+      "id": "b1e9028c-7378-4fae-b4ba-8d467a848c72",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# **🤖 AI Drafting**  \n- ### **Generates a personalized email draft using the Google Gemini AI model.** \n\n - ### **Uses Images related to the topic from Unsplash.**\n",
+        "height": 400,
+        "width": 340,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        768,
+        -1824
+      ],
+      "id": "0d3450be-0129-4db8-84fe-e910ddd0f700",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# **🤖 Result**\n- ### **Send a Welcome Email to the respective User.**",
+        "height": 280,
+        "width": 340,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        -1696
+      ],
+      "id": "43fe1dc1-ae0a-429e-a1bd-e1ddba86ce44",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "# **🔔 This Workflow collect Email address and user Info to send personalized Messages.**\n \n",
+        "height": 740,
+        "width": 2620
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        -1840
+      ],
+      "id": "6ff29496-8933-4a06-9f6d-c3f76bc6c510",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "# **🔔 This Workflow sends newsletter based on the topic selected by the user in the tone they want to read.**\n",
+        "height": 1620,
+        "width": 3000
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -496
+      ],
+      "id": "4aceeec0-7b64-4220-9094-2ba012f51736",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "# **🔔 Trigger**\n- ## **Activates weekly or bi weekly to send newsletter to customers.**",
+        "height": 320,
+        "width": 420,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        -144
+      ],
+      "id": "1d43a962-03e3-419e-90f2-7db778e6dde9",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "# **🤖 AI Drafting**  \n- ## **Make a newsletter for the user of the specific topic he chose.**\n",
+        "height": 480,
+        "width": 1020,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        -400
+      ],
+      "id": "cb8b5d86-10d3-4923-a94b-364ccfe93f59",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "={{ $json.Subject }}",
+        "message": "={{ $json.HTMLMessage }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1408,
+        -1584
+      ],
+      "id": "94586ea7-2b7b-4f21-873b-2fae695c0dd0",
+      "name": "Send Email",
+      "webhookId": "eeb85fd7-de3e-4c8a-bc40-de2890b9c594",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "7QigIs6Foy2jE6aO",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# **🤖 Result**  \n- ## **Send newsletter to the respective user.**\n",
+        "height": 720,
+        "width": 1140,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        80,
+        352
+      ],
+      "id": "c29dd3b5-7431-4e1d-b4f2-edb52a2efe2a",
+      "name": "Sticky Note7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get all Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get all Rows": {
+      "main": [
+        [
+          {
+            "node": "Categorize into Interests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GNews API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Categorized into Headings": {
+      "main": [
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GNews API": {
+      "main": [
+        [
+          {
+            "node": "Categorized into Headings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Categorize into Interests": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Tone Specfier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tone Specfier": {
+      "main": [
+        [
+          {
+            "node": "Clear unambigous characters from output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Newsletter Generator": {
+      "main": [
+        [
+          {
+            "node": "Clear unambigous characters from output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear unambigous characters from output": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear unambigous characters from output1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Combine user details and html newsletter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Operation Completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tone Specfier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine user details and html newsletter": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form For Newsletter": {
+      "main": [
+        [
+          {
+            "node": "Capture Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capture Leads": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Unsplash HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Generator": {
+      "main": [
+        [
+          {
+            "node": "Extract Email Address and subject from the Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Images from Unsplash": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Unsplash HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Extract Images from Unsplash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Email Address and subject from the Output": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Image and Leads Data": {
+      "main": [
+        [
+          {
+            "node": "Email Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Combine Image and Leads Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Karachi",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "73be4743-9cd0-446b-83f2-bc29c12936d5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "533fe5175031be2920b57ac9a77dfa7c0297e32aee4cfa537612cab3b1e61491"
+  },
+  "id": "XJOT2UnWaBMYXTvq",
+  "tags": []
+}
